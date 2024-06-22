@@ -2,8 +2,8 @@ const asyncHandler = require("express-async-handler")
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const validator = require("validator")
-const auth = require("../modal/auth")
 const sendEmail = require("../utils/email")
+const auth = require("../modal/auth")
 
 exports.registerUser = asyncHandler(async (req, res) => {
     const { name, email, password, phone } = req.body
