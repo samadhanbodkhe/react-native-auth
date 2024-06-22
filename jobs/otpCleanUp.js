@@ -1,5 +1,5 @@
 const corn = require("node-cron")
-const auth = require("../modal/auth") //Adjust the path as per your project structure
+const auth = require("../modal/AuthModal") //Adjust the path as per your project structure
 
 
 corn.schedule(`*/2 * * * *`, async () => {

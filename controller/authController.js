@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const validator = require("validator")
 const sendEmail = require("../utils/email")
-const auth = require("../modal/auth")
+const AuthModal = require("../modal/AuthModal")
 
 exports.registerUser = asyncHandler(async (req, res) => {
     const { name, email, password, phone } = req.body
@@ -25,13 +25,13 @@ exports.registerUser = asyncHandler(async (req, res) => {
 
     //validation
 
-    const result = await auth.findOne({ email })
+    const result = await AuthModal.findOne({ email })
 
     if (result) {
         return res.status(400).json({ message: "Email already register with us" })
     }
 
-    const phoneExist = auth.findOne({ phone })
+    const phoneExist = AuthModal.findOne({ phone })
 
     if (phoneExist) {
         return res.status(400).json({ message: "Phone already registerd with us" })
@@ -39,7 +39,7 @@ exports.registerUser = asyncHandler(async (req, res) => {
 
     const hashPass = await bcrypt.hash(password, 10)
 
-    await auth.create({ name, email, phone, password: hashPass })
+    await AuthModal.create({ name, email, phone, password: hashPass })
 
     res.json({ message: "User Register Success" })
 })
@@ -52,7 +52,7 @@ exports.loginUser = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Email/Phone and password are reqired " })
     }
 
-    const result = auth.findOne({
+    const result = AuthModal.findOne({
         $or: [{ email: emailOrphone }, { phone: emailOrphone }]
     })
 
@@ -118,27 +118,27 @@ exports.verifyOpt = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Otp is required" })
     }
 
-    const result = auth.findOne({ otp })
+    const result = AuthModal.findOne({ otp })
 
     if (!result) {
         return res.status(400).json({ message: "Invalid Opt" })
     }
 
     if (result.otpExpiry < Date.now()) {
-        await auth.updateOne(
+        await AuthModal.updateOne(
             { _id: result._id },
             { $unset: { otp: 1, otpExpiry: 1 } }
         )
         return res.status(400).json({ message: "Otp has expired" })
     }
 
-    await auth.updateOne(
+    await AuthModal.updateOne(
         { _id: result._id },
         { $unset: { otp: 1, otpExpiry: 1 } }
     )
 
     const token = jwt.sign({ userId: result._id }, process.env.JWT_KEY, { expiresIn: "7h" })
-    res.cookie("auth", token, { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true })
+    res.cookie("AuthModal", token, { maxAge: 1000 * 60 * 60 * 24 * 7, httpOnly: true })
 
     res.json({
         message: "User login success",
@@ -152,7 +152,7 @@ exports.verifyOpt = asyncHandler(async (req, res) => {
 })
 
 exports.logoutUser = asyncHandler(async (req, res) => {
-    res.clearCookie("auth")
+    res.clearCookie("AuthModal")
     res.json({ message: "User logout success" })
 })
 
@@ -168,7 +168,7 @@ exports.requiestPasswordReset = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Please provide a valid email" })
     }
 
-    const user = await auth.findOne({ email })
+    const user = await AuthModal.findOne({ email })
 
     if (!user) {
         return res.status(400).json({ message: "User Not found" })
@@ -221,14 +221,14 @@ exports.verifyOtpForReset = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Otp is required" })
     }
 
-    const user = await auth.findOne({ otp })
+    const user = await AuthModal.findOne({ otp })
 
     if (!user) {
         return res.status(400).json({ message: "Invalid Otp" })
     }
 
     if (user.otpExpiry < Date.now()) {
-        await auth.updateOne({ _id: user._id }, { $unset: { otp: 1, otpExpiry: 1 } })
+        await AuthModal.updateOne({ _id: user._id }, { $unset: { otp: 1, otpExpiry: 1 } })
         return res.status(400).json({ message: "Otp has expired" })
     }
 
@@ -259,7 +259,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
         const decode = jwt.verify(token, process.env.JWT_KEY)
         const userId = decode.userId
 
-        const user = await auth.findById(userId)
+        const user = await AuthModal.findById(userId)
 
         if (!user) {
             return res.status(400).json({ message: "User not found" })
@@ -268,7 +268,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
         const hashPass = await bcrypt.hash(newPassword, 10)
         user.password = hashPass
 
-        await auth.updateOne(
+        await AuthModal.updateOne(
             { _id: userId },
             { $unset: { otp: 1, otpExpiry: 1, isOtpVerified: 1, }, password: hashPass }
 
